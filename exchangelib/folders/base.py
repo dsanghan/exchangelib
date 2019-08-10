@@ -13,7 +13,7 @@ from ..errors import ErrorAccessDenied, ErrorFolderNotFound, ErrorCannotEmptyFol
 from ..fields import IntegerField, CharField, FieldPath, EffectiveRightsField, PermissionSetField, EWSElementField, \
     Field
 from ..items import CalendarItem, RegisterMixIn, Persona, ITEM_CLASSES, ITEM_TRAVERSAL_CHOICES, SHAPE_CHOICES, \
-    ID_ONLY, DELETE_TYPE_CHOICES, HARD_DELETE
+    ID_ONLY, DELETE_TYPE_CHOICES, HARD_DELETE, ALL_ITEM_CLASSES
 from ..properties import Mailbox, FolderId, ParentFolderId, InvalidField, DistinguishedFolderId
 from ..queryset import QuerySet, SearchableMixIn, DoesNotExist
 from ..restriction import Restriction
@@ -42,7 +42,7 @@ class BaseFolder(RegisterMixIn, SearchableMixIn):
     # Whether this folder type is allowed with the GetFolder service
     get_folder_allowed = True
     LOCALIZED_NAMES = dict()  # A map of (str)locale: (tuple)localized_folder_names
-    ITEM_MODEL_MAP = {cls.response_tag(): cls for cls in ITEM_CLASSES}
+    ITEM_MODEL_MAP = {cls.response_tag(): cls for cls in ALL_ITEM_CLASSES}
     ID_ELEMENT_CLS = FolderId
     LOCAL_FIELDS = [
         EWSElementField('parent_folder_id', field_uri='folder:ParentFolderId', value_cls=ParentFolderId,
@@ -62,6 +62,7 @@ class BaseFolder(RegisterMixIn, SearchableMixIn):
 
     def __init__(self, **kwargs):
         self.is_distinguished = kwargs.pop('is_distinguished', False)
+        self.sync_state = None
         super(BaseFolder, self).__init__(**kwargs)
 
     @property
