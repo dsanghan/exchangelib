@@ -232,8 +232,11 @@ class BaseProtocol(object):
             else:
                 username = self.credentials.username
             session = self.raw_session()
-            session.auth = get_auth_instance(auth_type=self.auth_type, username=username,
-                                             password=self.credentials.password)
+            if self.credentials.is_token:
+                session.headers.update({'Authorization': 'Bearer ' + self.credentials.password})
+            else:
+                session.auth = get_auth_instance(auth_type=self.auth_type, username=username,
+                                                 password=self.credentials.password)
         else:
             if self.auth_type not in (GSSAPI, SSPI):
                 raise ValueError('Auth type %r requires credentials' % self.auth_type)

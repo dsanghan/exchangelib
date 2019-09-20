@@ -40,9 +40,9 @@ class Credentials(BaseCredentials, PickleMixIn):
     DOMAIN = 'domain'
     UPN = 'upn'
 
-    __slots__ = ('username', 'password', 'type')
+    __slots__ = ('username', 'password', 'type', 'is_token')
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, is_token=False):
         if username.count('@') == 1:
             self.type = self.EMAIL
         elif username.count('\\') == 1:
@@ -51,6 +51,7 @@ class Credentials(BaseCredentials, PickleMixIn):
             self.type = self.UPN
         self.username = username
         self.password = password
+        self.is_token = is_token
 
     def __eq__(self, other):
         for k in self.__slots__:
