@@ -552,13 +552,13 @@ class Base64Field(FieldURIField):
                 try:
                     return base64.b64decode(padded)
                 except (TypeError, binascii.Error):
-                    log.warning("Cannot convert value '%s' on field '%s' to type %s", val, self.name, self.value_cls)
+                    log.warning("Cannot convert value '%s' on field '%s' to type %s", val[:min(len(val), 100)], self.name, self.value_cls)
                     return None
             else:
                 try:
                     return base64.b64decode(val)
                 except (TypeError, binascii.Error):
-                    log.warning("Cannot convert value '%s' on field '%s' to type %s", val, self.name, self.value_cls)
+                    log.warning("Cannot convert value '%s' on field '%s' to type %s", val[:min(len(val), 100)], self.name, self.value_cls)
                     return None
         return self.default
 
