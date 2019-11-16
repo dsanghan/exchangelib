@@ -533,14 +533,33 @@ class Base64Field(FieldURIField):
             kwargs['is_searchable'] = False
         super(Base64Field, self).__init__(*args, **kwargs)
 
+    def trim_base64(self, val):
+        length = len(val)
+        length = length - (length % 4 if length % 4 else 4)
+        try:
+            return base64.b64decode(val[:length])
+        except (TypeError, binascii.Error):
+            return None
+
     def from_xml(self, elem, account):
         val = self._get_val_from_elem(elem)
         if val is not None:
-            try:
-                return base64.b64decode(val)
-            except (TypeError, binascii.Error):
-                log.warning("Cannot convert value '%s' on field '%s' to type %s", val, self.name, self.value_cls)
-                return None
+            if len(val) % 4 != 0:
+                ret = self.trim_base64(val)
+                if ret:
+                    return ret
+                padded = val + "=" * ((4 - len(val) % 4) % 4)
+                try:
+                    return base64.b64decode(padded)
+                except (TypeError, binascii.Error):
+                    log.warning("Cannot convert value '%s' on field '%s' to type %s", val, self.name, self.value_cls)
+                    return None
+            else:
+                try:
+                    return base64.b64decode(val)
+                except (TypeError, binascii.Error):
+                    log.warning("Cannot convert value '%s' on field '%s' to type %s", val, self.name, self.value_cls)
+                    return None
         return self.default
 
     def to_xml(self, value, version):
