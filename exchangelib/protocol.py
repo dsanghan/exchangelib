@@ -9,7 +9,6 @@ from __future__ import unicode_literals
 
 import datetime
 import logging
-from multiprocessing.pool import ThreadPool
 import os
 from threading import Lock
 
@@ -44,7 +43,7 @@ class BaseProtocol(object):
     # The maximum number of sessions (== TCP connections, see below) we will open to this service endpoint. Keep this
     # low unless you have an agreement with the Exchange admin on the receiving end to hammer the server and
     # rate-limiting policies have been disabled for the connecting user.
-    SESSION_POOLSIZE = 4
+    SESSION_POOLSIZE = 1
     # We want only 1 TCP connection per Session object. We may have lots of different credentials hitting the server and
     # each credential needs its own session (NTLM auth will only send credentials once and then secure the connection,
     # so a connection can only handle requests for one credential). Having multiple connections ser Session could
@@ -343,24 +342,8 @@ class Protocol(with_metaclass(CachingProtocol, BaseProtocol)):
     def version(self):
         return self.config.version
 
-    @threaded_cached_property
-    def thread_pool(self):
-        # Used by services to process service requests that are able to run in parallel. Thread pool should be
-        # larger than the connection pool so we have time to process data without idling the connection.
-        # Create the pool as the last thing here, since we may fail in the version or auth type guessing, which would
-        # leave open threads around to be garbage collected.
-        thread_poolsize = 4 * self._session_pool_size
-        return ThreadPool(processes=thread_poolsize)
-
     def close(self):
         log.debug('Server %s: Closing thread pool', self.server)
-        # Close the thread pool before closing the session pool to ensure all sessions are released.
-        if "thread_pool" in self.__dict__:
-            # Calling thread_pool.join() in Python 3.8 will hang forever. This is seen when running a test case that
-            # uses the thread pool, e.g.: python tests/__init__.py MessagesTest.test_export_with_error
-            # I don't know yet why this is happening.
-            self.thread_pool.terminate()
-            del self.__dict__["thread_pool"]
         super(Protocol, self).close()
 
     def get_timezones(self, timezones=None, return_full_timezone_data=False):
@@ -499,11 +482,6 @@ class Protocol(with_metaclass(CachingProtocol, BaseProtocol)):
     def __getstate__(self):
         # The thread and session pools cannot be pickled
         state = super(Protocol, self).__getstate__()
-        try:
-            del state['thread_pool']
-        except KeyError:
-            # thread_pool is a cached property and may not exist
-            pass
         return state
 
     def __str__(self):

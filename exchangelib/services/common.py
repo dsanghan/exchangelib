@@ -512,29 +512,7 @@ class EWSPooledMixIn(EWSService):
         for chunk in chunkify(items, self.chunk_size):
             n += 1
             log.debug('Starting %s._get_elements worker %s for %s items', self.__class__.__name__, n, len(chunk))
-            results.append((n, self.protocol.thread_pool.apply_async(
-                lambda c: self._get_elements(payload=payload_func(c, **kwargs)),
-                (chunk,)
-            )))
-
-            # Results will be available before iteration has finished if 'items' is a slow generator. Return early
-            for idx in range(len(results)):
-                i, r = results[idx]
-                if not r.ready():
-                    # First non-yielded result isn't ready yet. Yielding other ready results would mess up ordering
-                    break
-                log.debug('%s._get_elements result %s is ready early', self.__class__.__name__, i)
-                for elem in r.get():
-                    yield elem
-                # Remove results object
-                del results[idx]
-
-        # Yield remaining results in order, as they become available
-        for i, r in results:
-            log.debug('Waiting for %s._get_elements result %s of %s', self.__class__.__name__, i, n)
-            elems = r.get()
-            log.debug('%s._get_elements result %s of %s is ready', self.__class__.__name__, i, n)
-            for elem in elems:
+            for elem in self._get_elements(payload=payload_func(chunk, **kwargs)):
                 yield elem
 
 
